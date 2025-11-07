@@ -1,0 +1,112 @@
+================================================================================
+    SIMULADOR DE ROBOT MÓVIL - INICIO RÁPIDO
+================================================================================
+
+PASO 1: INSTALAR DEPENDENCIAS
+------------------------------
+Abrir PowerShell en esta carpeta y ejecutar:
+
+    pip install -r requirements.txt
+
+Esto instalará:
+- numpy (cálculos numéricos)
+- matplotlib (gráficas)
+- scipy (estadísticas)
+
+
+PASO 2: VERIFICAR INSTALACIÓN (OPCIONAL)
+-----------------------------------------
+    python test_imports.py
+
+Si ve "[OK]" en todas las líneas, todo está listo.
+
+
+PASO 3: EJECUTAR LA APLICACIÓN
+-------------------------------
+    python main.py
+
+
+================================================================================
+PRIMEROS PASOS EN LA APLICACIÓN
+================================================================================
+
+1. Seleccionar tipo de robot (panel izquierdo)
+2. Configurar parámetros usando los sliders o campos numéricos
+3. Hacer clic en "Aplicar Parámetros"
+4. Hacer clic en "Iniciar" (panel inferior)
+5. Ver resultados en las pestañas
+
+
+EJEMPLO DE CONFIGURACIÓN SIMPLE:
+---------------------------------
+- Tipo: Diferencial Centrado
+- Masa: 10 kg
+- Coef. fricción: 0.5
+- Distancia entre ruedas: 0.4 m
+- Radio rueda: 0.08 m
+- Perfil: Modo B - Velocidades Fijas
+  * Velocidad lineal: 1.0 m/s
+  * Velocidad angular: 0.0 rad/s
+  * Duración: 10 s
+- Terreno: Plano
+
+Hacer clic en "Aplicar Parámetros" y luego "Iniciar"
+
+
+================================================================================
+DOCUMENTACIÓN COMPLETA
+================================================================================
+
+README.md               - Visión general del proyecto
+INSTRUCCIONES.md        - Guía detallada de uso
+DETALLES_TECNICOS.md    - Modelos matemáticos y arquitectura
+PROYECTO_COMPLETO.md    - Resumen integral del proyecto
+
+
+================================================================================
+SOLUCIÓN RÁPIDA DE PROBLEMAS
+================================================================================
+
+PROBLEMA: "No module named 'numpy'"
+SOLUCIÓN: pip install numpy matplotlib scipy
+
+PROBLEMA: La ventana no aparece
+SOLUCIÓN: Verificar que tkinter esté instalado (viene con Python en Windows)
+
+PROBLEMA: Error de validación
+SOLUCIÓN: Leer el mensaje en el panel inferior, indica qué corregir
+
+
+================================================================================
+ESTRUCTURA DE PESTAÑAS
+================================================================================
+
+Trayectoria         - Recorrido del robot con vectores de velocidad
+Velocidad del Robot - Velocidades lineal y angular vs. tiempo
+Velocidad de Ruedas - Velocidades angulares por rueda
+Fuerzas por Rueda   - Fuerzas tangenciales y normales
+Aceleraciones       - Aceleraciones lineal y angular
+Torque por Rueda    - Torque en cada rueda vs. tiempo
+Potencia            - Potencias por rueda y total
+Tabla de Resultados - Estadísticas y energía total
+Vista 3D            - Terreno y recorrido (solo para terrenos inclinados)
+
+
+================================================================================
+CONTROLES
+================================================================================
+
+Botón "Iniciar"     - Comienza la simulación
+Botón "Detener"     - Pausa la simulación
+Botón "Reiniciar"   - Limpia y prepara para nueva simulación
+
+Cada parámetro tiene:
+- Slider (barra deslizante)
+- Campo numérico (escribir y Enter)
+- Selector de unidades (conversión automática)
+
+
+================================================================================
+¡Listo para simular! Para dudas, consulte la documentación en los archivos .md
+================================================================================
+

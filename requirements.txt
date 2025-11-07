@@ -1,0 +1,14 @@
+# Requisitos para la Aplicación de Simulación de Robot Móvil
+
+# Python 3.9+
+
+# GUI
+# tkinter viene incluido con Python en Windows
+
+# Gráficas y visualización
+matplotlib>=3.5.0
+numpy>=1.21.0
+
+# Cálculos estadísticos
+scipy>=1.7.0
+
