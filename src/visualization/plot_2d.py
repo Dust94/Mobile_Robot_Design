@@ -9,6 +9,18 @@ from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 from matplotlib.figure import Figure
 from typing import Dict, List
 
+# Paletas y estilos para mejorar la visibilidad de las curvas
+COLOR_VEL_LINEAL = '#1f77b4'
+COLOR_VEL_ANGULAR = '#d95f02'
+LINESTYLE_VEL_LINEAL = '-'
+LINESTYLE_VEL_ANGULAR = '--'
+LINEWIDTH_VEL_GRUESO = 2.4
+ALPHA_VEL = 0.92
+
+PALETA_RUEDAS = ['#1f77b4', '#d62728', '#2ca02c', '#9467bd']
+ESTILOS_RUEDAS = ['-', '--', '-.', ':']
+ANCHOS_RUEDAS = [2.4, 2.4, 2.0, 2.0]
+
 
 class Visualizador2D:
     """
@@ -144,17 +156,37 @@ class Visualizador2D:
         v = np.array(historial['v'])
         omega = np.array(historial['omega'])
         
-        ax1.plot(t, v, 'b-', linewidth=1.5)
+        ax1.plot(
+            t,
+            v,
+            color=COLOR_VEL_LINEAL,
+            linestyle=LINESTYLE_VEL_LINEAL,
+            linewidth=LINEWIDTH_VEL_GRUESO,
+            alpha=ALPHA_VEL,
+            label='Velocidad lineal',
+            zorder=2,
+        )
         ax1.set_xlabel('Tiempo (s)')
         ax1.set_ylabel('Velocidad lineal (m/s)')
         ax1.set_title('Velocidad Lineal del Robot')
         ax1.grid(True, alpha=0.3)
+        ax1.legend(loc='upper right')
         
-        ax2.plot(t, omega, 'r-', linewidth=1.5)
+        ax2.plot(
+            t,
+            omega,
+            color=COLOR_VEL_ANGULAR,
+            linestyle=LINESTYLE_VEL_ANGULAR,
+            linewidth=LINEWIDTH_VEL_GRUESO,
+            alpha=ALPHA_VEL,
+            label='Velocidad angular',
+            zorder=2,
+        )
         ax2.set_xlabel('Tiempo (s)')
         ax2.set_ylabel('Velocidad angular (rad/s)')
         ax2.set_title('Velocidad Angular del Robot')
         ax2.grid(True, alpha=0.3)
+        ax2.legend(loc='upper right')
         
         self.figuras['velocidad_robot']['fig'].tight_layout()
         self.canvas['velocidad_robot'].draw()
@@ -196,8 +228,6 @@ class Visualizador2D:
             return
         
         num_ruedas = len(velocidades[0])
-        colores = ['b', 'r', 'g', 'orange']
-        
         if num_ruedas == 2:
             etiquetas = ['Izquierda', 'Derecha']
         else:
@@ -205,7 +235,19 @@ class Visualizador2D:
         
         for i in range(num_ruedas):
             omega_rueda = [v[i] for v in velocidades]
-            ax.plot(t, omega_rueda, color=colores[i], linewidth=1.5, label=etiquetas[i])
+            color = PALETA_RUEDAS[i % len(PALETA_RUEDAS)]
+            estilo = ESTILOS_RUEDAS[i % len(ESTILOS_RUEDAS)]
+            ancho = ANCHOS_RUEDAS[i % len(ANCHOS_RUEDAS)]
+            ax.plot(
+                t,
+                omega_rueda,
+                color=color,
+                linestyle=estilo,
+                linewidth=ancho,
+                alpha=ALPHA_VEL,
+                label=etiquetas[i],
+                zorder=2 + i,
+            )
         
         ax.set_xlabel('Tiempo (s)')
         ax.set_ylabel('Velocidad angular (rad/s)')
