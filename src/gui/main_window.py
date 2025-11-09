@@ -7,13 +7,14 @@ import tkinter as tk
 from tkinter import ttk, messagebox
 import numpy as np
 
-from models import (DiferencialCentrado, DiferencialDescentrado,
-                   CuatroRuedasCentrado, CuatroRuedasDescentrado)
-from visualization import Visualizador2D, Visualizador3D
+from ..models import (DiferencialCentrado, DiferencialDescentrado,
+                      CuatroRuedasCentrado, CuatroRuedasDescentrado)
+from ..visualization import Visualizador2D, Visualizador3D
 from .componentes import ParametroControl, PanelMonitoreo
 from .validador import ValidadorParametros
 from .simulacion import MotorSimulacion
 from .tabla_resultados import TablaResultados
+from .ecuaciones import VisualizadorEcuaciones
 
 
 class VentanaPrincipal:
@@ -40,6 +41,9 @@ class VentanaPrincipal:
         y = (screen_height - window_height) // 2
         
         self.root.geometry(f"{window_width}x{window_height}+{x}+{y}")
+        
+        # Establecer tamaño mínimo de ventana para mantener usabilidad
+        self.root.minsize(800, 600)
         
         # Permitir maximizar
         self.root.state('normal')
@@ -85,7 +89,25 @@ class VentanaPrincipal:
         def _on_mousewheel(event):
             canvas_params.yview_scroll(int(-1*(event.delta/120)), "units")
         
-        canvas_params.bind_all("<MouseWheel>", _on_mousewheel)
+        # Scroll con rueda del mouse - solo cuando el cursor está sobre el canvas
+        # Esto evita conflictos con otros widgets scrolleables
+        def _bind_wheel():
+            canvas_params.bind_all("<MouseWheel>", _on_mousewheel)
+        
+        def _unbind_wheel():
+            canvas_params.unbind_all("<MouseWheel>")
+        
+        canvas_params.bind("<Enter>", lambda e: _bind_wheel())
+        canvas_params.bind("<Leave>", lambda e: _unbind_wheel())
+        
+        # Navegación por teclado para accesibilidad
+        canvas_params.bind("<Up>", lambda e: canvas_params.yview_scroll(-1, "units"))
+        canvas_params.bind("<Down>", lambda e: canvas_params.yview_scroll(1, "units"))
+        canvas_params.bind("<Prior>", lambda e: canvas_params.yview_scroll(-1, "pages"))  # PgUp
+        canvas_params.bind("<Next>", lambda e: canvas_params.yview_scroll(1, "pages"))    # PgDn
+        
+        # Permitir que el canvas reciba foco para navegación por teclado
+        canvas_params.config(takefocus=True)
         
         canvas_params.pack(side='left', fill='both', expand=True)
         scrollbar_params.pack(side='right', fill='y')
@@ -281,6 +303,13 @@ class VentanaPrincipal:
         # Pestaña: 3D (se habilitará según terreno)
         self.tab_3d = ttk.Frame(self.notebook)
         self.notebook.add(self.tab_3d, text="Vista 3D")
+        
+        # Pestaña: Ecuaciones Matemáticas
+        self.tab_ecuaciones = ttk.Frame(self.notebook)
+        self.notebook.add(self.tab_ecuaciones, text="Ecuaciones")
+        
+        self.visualizador_ecuaciones = VisualizadorEcuaciones(self.tab_ecuaciones)
+        # No necesita pack, el visualizador ya se empaqueta internamente
     
     def _actualizar_controles_rodaje(self):
         """Actualiza controles de tren de rodaje según tipo de robot."""
@@ -618,7 +647,8 @@ class VentanaPrincipal:
         self.motor_simulacion = MotorSimulacion(
             self.robot,
             self.parametros,
-            callback_actualizacion=self._actualizar_visualizaciones
+            callback_actualizacion=self._actualizar_visualizaciones,
+            callback_finalizacion=self._finalizar_simulacion
         )
         self.panel_monitoreo.agregar_log("✓ Motor de simulación configurado", "success")
         
@@ -631,8 +661,51 @@ class VentanaPrincipal:
         self.panel_monitoreo.set_botones_simulando(True)
         self.panel_monitoreo.agregar_log("✓ SIMULACIÓN INICIADA - Presione Detener para pausar", "success")
     
+    def _finalizar_simulacion(self, exitoso: bool, mensaje: str):
+        """
+        Callback cuando la simulación termina.
+        Se ejecuta desde el hilo de simulación, por lo que usa root.after().
+        
+        Args:
+            exitoso: True si la simulación completó exitosamente
+            mensaje: Mensaje descriptivo
+        """
+        def actualizar_gui():
+            if exitoso:
+                self.panel_monitoreo.set_estado("Completado ✓", "success")
+                self.panel_monitoreo.agregar_log("", "info")  # Línea en blanco
+                self.panel_monitoreo.agregar_log("=" * 50, "success")
+                self.panel_monitoreo.agregar_log("     SIMULACIÓN COMPLETADA EXITOSAMENTE", "success")
+                self.panel_monitoreo.agregar_log("=" * 50, "success")
+                self.panel_monitoreo.agregar_log(mensaje, "success")
+                self.panel_monitoreo.agregar_log("✓ Todas las gráficas han sido generadas", "success")
+                self.panel_monitoreo.agregar_log("✓ Los resultados están disponibles en las pestañas", "success")
+                self.panel_monitoreo.agregar_log("", "info")
+                
+                # Mostrar notificación
+                messagebox.showinfo(
+                    "Simulación Completada",
+                    "La simulación ha finalizado exitosamente.\n\n"
+                    "Los resultados están disponibles en las pestañas de visualización."
+                )
+            else:
+                self.panel_monitoreo.set_estado("Error ✗", "error")
+                self.panel_monitoreo.agregar_log("", "info")
+                self.panel_monitoreo.agregar_log("=" * 50, "error")
+                self.panel_monitoreo.agregar_log("     ERROR EN LA SIMULACIÓN", "error")
+                self.panel_monitoreo.agregar_log("=" * 50, "error")
+                self.panel_monitoreo.agregar_log(mensaje, "error")
+                
+                messagebox.showerror("Error en Simulación", mensaje)
+            
+            # Habilitar botones
+            self.panel_monitoreo.set_botones_simulando(False)
+        
+        # Ejecutar en el hilo principal de Tkinter
+        self.root.after(0, actualizar_gui)
+    
     def _detener_simulacion(self):
-        """Detiene la simulación."""
+        """Detiene la simulación manualmente."""
         self.panel_monitoreo.agregar_log("Deteniendo simulación...", "warning")
         
         if self.motor_simulacion:
@@ -641,7 +714,7 @@ class VentanaPrincipal:
         
         self.panel_monitoreo.set_estado("Detenido", "warning")
         self.panel_monitoreo.set_botones_simulando(False)
-        self.panel_monitoreo.agregar_log("=== SIMULACIÓN DETENIDA ===", "warning")
+        self.panel_monitoreo.agregar_log("=== SIMULACIÓN DETENIDA MANUALMENTE ===", "warning")
     
     def _reiniciar_simulacion(self):
         """Reinicia la simulación."""

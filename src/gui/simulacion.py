@@ -6,7 +6,7 @@ import threading
 import time
 import numpy as np
 from typing import Callable, Dict, Optional
-from models import RobotMovilBase
+from ..models import RobotMovilBase
 
 
 class MotorSimulacion:
@@ -16,7 +16,8 @@ class MotorSimulacion:
     """
     
     def __init__(self, robot: RobotMovilBase, parametros: Dict, 
-                 callback_actualizacion: Optional[Callable] = None):
+                 callback_actualizacion: Optional[Callable] = None,
+                 callback_finalizacion: Optional[Callable] = None):
         """
         Inicializa el motor de simulación.
         
@@ -24,14 +25,17 @@ class MotorSimulacion:
             robot: Instancia del robot a simular
             parametros: Diccionario con parámetros de simulación
             callback_actualizacion: Función a llamar en cada actualización
+            callback_finalizacion: Función a llamar cuando la simulación termina
         """
         self.robot = robot
         self.parametros = parametros
         self.callback_actualizacion = callback_actualizacion
+        self.callback_finalizacion = callback_finalizacion
         
         self.hilo = None
         self.ejecutando = False
         self.pausado = False
+        self.completada_exitosamente = False
         
         # Parámetros de simulación
         self.dt = 0.05  # Paso de tiempo (s)
@@ -128,14 +132,27 @@ class MotorSimulacion:
                 print("[DEBUG] Actualizando gráficas final...")
                 self.callback_actualizacion()
             
+            # Marcar como completada exitosamente
+            self.completada_exitosamente = True
             self.ejecutando = False
+            
+            # Notificar finalización
+            if self.callback_finalizacion:
+                print("[DEBUG] Notificando finalización...")
+                self.callback_finalizacion(exitoso=True, mensaje="Simulación completada exitosamente")
+            
             print("[DEBUG] Simulación terminada")
         
         except Exception as e:
             print(f"[ERROR] Error en simulación: {e}")
             import traceback
             traceback.print_exc()
+            self.completada_exitosamente = False
             self.ejecutando = False
+            
+            # Notificar error
+            if self.callback_finalizacion:
+                self.callback_finalizacion(exitoso=False, mensaje=f"Error en simulación: {str(e)}")
     
     def _generar_perfil_rampa(self) -> list:
         """

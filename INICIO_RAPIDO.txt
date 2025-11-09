@@ -14,11 +14,23 @@ Esto instalará:
 - scipy (estadísticas)
 
 
-PASO 2: VERIFICAR INSTALACIÓN (OPCIONAL)
+PASO 2: VERIFICAR PROYECTO (RECOMENDADO)
 -----------------------------------------
-    python test_imports.py
+    python tests/test_completo.py
 
-Si ve "[OK]" en todas las líneas, todo está listo.
+Esto verifica:
+- Estructura de carpetas y archivos
+- Imports y referencias internas
+- Configuracion de modulos
+
+Si ve "[SUCCESS] TODAS LAS VERIFICACIONES PASARON", todo esta listo.
+
+
+PASO 2.1: VERIFICAR SOLO DEPENDENCIAS (ALTERNATIVA)
+----------------------------------------------------
+    python tests/test_imports.py
+
+Si ve "[OK]" en todas las lineas, las dependencias estan instaladas.
 
 
 PASO 3: EJECUTAR LA APLICACIÓN
@@ -57,10 +69,9 @@ Hacer clic en "Aplicar Parámetros" y luego "Iniciar"
 DOCUMENTACIÓN COMPLETA
 ================================================================================
 
-README.md               - Visión general del proyecto
-INSTRUCCIONES.md        - Guía detallada de uso
-DETALLES_TECNICOS.md    - Modelos matemáticos y arquitectura
-PROYECTO_COMPLETO.md    - Resumen integral del proyecto
+docs/README.md               - Visión general del proyecto
+docs/INSTRUCCIONES.md        - Guía detallada de uso
+docs/DETALLES_TECNICOS.md    - Modelos matemáticos y arquitectura
 
 
 ================================================================================

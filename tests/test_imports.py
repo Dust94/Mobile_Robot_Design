@@ -49,26 +49,26 @@ def verificar_importaciones():
     
     # Módulos del proyecto
     try:
-        from models import (RobotMovilBase, DiferencialCentrado, 
-                           DiferencialDescentrado, CuatroRuedasCentrado,
-                           CuatroRuedasDescentrado)
-        print("[OK] Modulo models")
+        from src.models import (RobotMovilBase, DiferencialCentrado, 
+                               DiferencialDescentrado, CuatroRuedasCentrado,
+                               CuatroRuedasDescentrado)
+        print("[OK] Modulo src.models")
     except ImportError as e:
-        print(f"[ERROR] Error importando models: {e}")
+        print(f"[ERROR] Error importando src.models: {e}")
         return False
     
     try:
-        from visualization import Visualizador2D, Visualizador3D
-        print("[OK] Modulo visualization")
+        from src.visualization import Visualizador2D, Visualizador3D
+        print("[OK] Modulo src.visualization")
     except ImportError as e:
-        print(f"[ERROR] Error importando visualization: {e}")
+        print(f"[ERROR] Error importando src.visualization: {e}")
         return False
     
     try:
-        from gui import VentanaPrincipal
-        print("[OK] Modulo gui")
+        from src.gui import VentanaPrincipal
+        print("[OK] Modulo src.gui")
     except ImportError as e:
-        print(f"[ERROR] Error importando gui: {e}")
+        print(f"[ERROR] Error importando src.gui: {e}")
         return False
     
     print("-" * 50)

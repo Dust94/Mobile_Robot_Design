@@ -10,7 +10,7 @@ Fecha: 2025
 """
 
 import tkinter as tk
-from gui import VentanaPrincipal
+from src.gui import VentanaPrincipal
 
 
 def main():

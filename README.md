@@ -1,138 +1,113 @@
-# Simulación de Robot Móvil - Cinemática y Dinámica
+# Simulador de Robot Móvil - Cinemática y Dinámica
 
-Aplicación en Python con interfaz gráfica (Tkinter) para evaluar la cinemática y dinámica de robots móviles.
+![Python](https://img.shields.io/badge/Python-3.9%2B-blue)
+![License](https://img.shields.io/badge/License-Educational-green)
 
-## Características
+Aplicación en Python con interfaz gráfica (Tkinter) para evaluar la cinemática y dinámica de robots móviles (diferenciales y de cuatro ruedas) bajo diferentes configuraciones.
 
-### Tipos de Robot
-- **Diferencial Centrado**: 2 ruedas motrices + rueda loca, centro de masa en el origen
-- **Diferencial Descentrado**: 2 ruedas motrices + rueda loca, centro de masa descentrado (A, B, C)
-- **Cuatro Ruedas Centrado**: 4 ruedas motrices, centro de masa en el origen
-- **Cuatro Ruedas Descentrado**: 4 ruedas motrices, centro de masa descentrado (A, B, C)
+## 🚀 Inicio Rápido
 
-### Perfiles de Movimiento
-1. **Modo A - Rampa-Constante-Rampa**: Aceleración → Velocidad constante → Desaceleración
-2. **Modo B - Velocidades Fijas**: Velocidades lineal y angular constantes durante toda la simulación
+### 1. Instalar Dependencias
 
-### Perfiles de Terreno
-1. **Plano**: Sin inclinación
-2. **Inclinación Simple**: Un eje de inclinación (pitch)
-3. **Inclinación Compuesta**: Dos ejes de inclinación (pitch y roll)
-
-### Visualizaciones
-- **Trayectoria XY** con vectores de velocidad lineal
-- **Gráficas vs. tiempo**:
-  - Velocidades del robot (lineal y angular)
-  - Velocidades angulares de ruedas
-  - Fuerzas tangenciales y normales por rueda
-  - Torques por rueda
-  - Potencias por rueda y potencia total
-  - Aceleraciones (lineal y angular)
-- **Vista 3D**: Terreno inclinado y recorrido del robot (para terrenos 2 y 3)
-- **Tabla de Resultados**: Estadísticas (mín, máx, promedio, moda) y energía total consumida
-
-## Requisitos
-
-- Python 3.9 o superior
-- Bibliotecas (ver `requirements.txt`):
-  - matplotlib
-  - numpy
-  - scipy
-
-## Instalación
-
-1. Clonar o descargar este repositorio
-
-2. Instalar dependencias:
 ```bash
 pip install -r requirements.txt
 ```
 
-## Uso
+### 2. Verificar Proyecto (Recomendado)
 
-Ejecutar la aplicación:
+```bash
+python tests/test_completo.py
+```
+
+Esto verifica la estructura y los imports del proyecto.
+
+### 3. Ejecutar la Aplicación
+
 ```bash
 python main.py
 ```
 
-### Flujo de Trabajo
+### Verificación Alternativa
 
-1. **Seleccionar tipo de robot** en el panel izquierdo
-2. **Configurar parámetros**:
-   - Parámetros físicos (masa, fricción, dimensiones)
-   - Tren de rodaje (distancias entre ruedas)
-   - Centro de masa (si es descentrado)
-   - Perfil de movimiento (velocidades y tiempos)
-   - Perfil de terreno (ángulos de inclinación)
-3. **Aplicar Parámetros**: Validar y preparar la configuración
-4. **Iniciar**: Comenzar la simulación
-5. **Visualizar**: Ver resultados en las diferentes pestañas
-6. **Detener/Reiniciar**: Controlar la simulación según sea necesario
+```bash
+# Solo verificar dependencias
+python tests/test_imports.py
 
-### Edición de Parámetros
+# Solo verificar estructura
+python tests/test_estructura.py
 
-Cada parámetro se puede editar mediante:
-- **Slider**: Arrastre para cambiar el valor
-- **Campo numérico**: Escriba el valor y presione Enter
-- **Selector de unidades**: Cambie entre unidades disponibles
-
-Todas las gráficas y resultados se muestran en unidades SI.
-
-## Estructura del Proyecto
-
-```
-/proyecto/
-├─ gui/                  # Componentes de interfaz gráfica
-│  ├─ __init__.py
-│  ├─ main_window.py     # Ventana principal
-│  ├─ componentes.py     # Widgets personalizados
-│  ├─ validador.py       # Validación de parámetros
-│  ├─ simulacion.py      # Motor de simulación (threading)
-│  └─ tabla_resultados.py # Tabla de estadísticas
-│
-├─ models/               # Modelos cinemáticos y dinámicos
-│  ├─ __init__.py
-│  ├─ robot_base.py      # Clase abstracta
-│  ├─ differential.py    # Robots diferenciales
-│  └─ four_wheel.py      # Robots de cuatro ruedas
-│
-├─ visualization/        # Módulos de visualización
-│  ├─ __init__.py
-│  ├─ plot_2d.py         # Gráficas 2D
-│  └─ plot_3d.py         # Gráficas 3D
-│
-├─ main.py               # Punto de entrada
-├─ requirements.txt      # Dependencias
-└─ README.md             # Este archivo
+# Solo verificar imports
+python tests/test_imports_estructura.py
 ```
 
-## Validaciones
+## 📋 Características Principales
 
-La aplicación valida automáticamente:
-- Positividad de masa, dimensiones y distancias
-- Coherencia geométrica (radios vs. distancias)
-- Rangos de ángulos de inclinación (0-90°)
-- Tiempos de simulación válidos
-- Centro de masa coherente con dimensiones del robot
+- **4 tipos de robot**: Diferencial y 4×4 (centrado/descentrado)
+- **2 perfiles de movimiento**: Rampa-Constante-Rampa y Velocidades Fijas
+- **3 perfiles de terreno**: Plano, Inclinación Simple, Inclinación Compuesta
+- **10 pestañas de visualización**: Trayectorias, fuerzas, torques, potencias, aceleraciones y más
+- **Pestaña de ecuaciones matemáticas**: 25+ ecuaciones con LaTeX, leyendas, unidades y contexto
+- **Simulación en tiempo real** con threading
+- **Validación automática** de parámetros
 
-Si hay errores, se muestra un mensaje descriptivo indicando cómo corregirlos.
+## 📁 Estructura del Proyecto
 
-## Notas Técnicas
+```
+Robot_Conceptual/
+├── src/                    # Código fuente principal
+│   ├── gui/               # Interfaz gráfica (Tkinter)
+│   ├── models/            # Modelos cinemáticos y dinámicos
+│   └── visualization/     # Sistema de visualización 2D/3D
+├── utils/                 # Utilidades reutilizables
+├── tests/                 # Scripts de prueba
+├── docs/                  # Documentación completa
+│   ├── README.md          # Documentación detallada
+│   ├── DETALLES_TECNICOS.md
+│   └── INSTRUCCIONES.md
+├── main.py                # Punto de entrada
+├── requirements.txt       # Dependencias
+└── INICIO_RAPIDO.txt      # Guía rápida
+```
 
-- La simulación se ejecuta en un **hilo separado** para mantener la interfaz responsiva
-- El paso de tiempo de simulación es **dt = 0.05 s**
-- Las gráficas se actualizan cada **100 ms** durante la simulación
-- Todas las unidades internas son **SI**
-- La energía se calcula integrando la potencia total con la **regla del trapecio**
+## 📚 Documentación
 
-## Limitaciones
+La documentación completa está disponible en la carpeta `docs/`:
 
-- No incluye sensores, mapas ni SLAM
-- No exporta resultados a archivos
-- Solo los 4 tipos de robot especificados
-- Solo los perfiles de movimiento y terreno indicados
+- **[docs/README.md](docs/README.md)** - Documentación principal con características detalladas
+- **[docs/INSTRUCCIONES.md](docs/INSTRUCCIONES.md)** - Guía de uso paso a paso
+- **[docs/DETALLES_TECNICOS.md](docs/DETALLES_TECNICOS.md)** - Modelos matemáticos y arquitectura
+- **[docs/ECUACIONES_MATEMATICAS.md](docs/ECUACIONES_MATEMATICAS.md)** - 📐 Todas las ecuaciones del proyecto
 
-## Licencia
+También consulte **[INICIO_RAPIDO.txt](INICIO_RAPIDO.txt)** para comenzar rápidamente.
+
+## 🛠️ Requisitos
+
+- Python 3.9 o superior
+- NumPy
+- Matplotlib
+- SciPy
+
+## 📖 Uso Básico
+
+1. Seleccionar tipo de robot
+2. Configurar parámetros físicos y de movimiento
+3. Aplicar parámetros
+4. Iniciar simulación
+5. Visualizar resultados en las pestañas
+
+## 🎯 Objetivo del Proyecto
+
+Este simulador permite evaluar el comportamiento cinemático y dinámico de robots móviles considerando:
+- Distribución de masa (centro de masa centrado/descentrado)
+- Perfiles de movimiento variados
+- Terrenos planos e inclinados
+- Efectos de fricción y gravedad
+
+## 📄 Licencia
 
 Este proyecto es de código abierto para fines educativos.
+
+---
+
+**Desarrollado como herramienta educativa para el análisis de robots móviles**
 

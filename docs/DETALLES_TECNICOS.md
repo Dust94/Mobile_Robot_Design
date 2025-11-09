@@ -6,23 +6,27 @@
 
 ```
 Robot_Conceptual/
-├── models/              # Modelos cinemáticos y dinámicos
-│   ├── robot_base.py    # Clase abstracta base
-│   ├── differential.py  # Robots diferenciales
-│   └── four_wheel.py    # Robots de cuatro ruedas
+├── src/                    # Código fuente principal
+│   ├── models/             # Modelos cinemáticos y dinámicos
+│   │   ├── robot_base.py   # Clase abstracta base
+│   │   ├── differential.py # Robots diferenciales
+│   │   └── four_wheel.py   # Robots de cuatro ruedas
+│   │
+│   ├── visualization/      # Sistema de visualización
+│   │   ├── plot_2d.py     # Gráficas 2D (Matplotlib)
+│   │   └── plot_3d.py     # Gráficas 3D (Matplotlib)
+│   │
+│   └── gui/                # Interfaz gráfica
+│       ├── main_window.py  # Ventana principal
+│       ├── componentes.py  # Widgets personalizados
+│       ├── validador.py    # Validación de parámetros
+│       ├── simulacion.py   # Motor de simulación (threading)
+│       └── tabla_resultados.py  # Tabla estadística
 │
-├── visualization/       # Sistema de visualización
-│   ├── plot_2d.py      # Gráficas 2D (Matplotlib)
-│   └── plot_3d.py      # Gráficas 3D (Matplotlib)
-│
-├── gui/                 # Interfaz gráfica
-│   ├── main_window.py   # Ventana principal
-│   ├── componentes.py   # Widgets personalizados
-│   ├── validador.py     # Validación de parámetros
-│   ├── simulacion.py    # Motor de simulación (threading)
-│   └── tabla_resultados.py  # Tabla estadística
-│
-└── main.py             # Punto de entrada
+├── utils/                  # Utilidades reutilizables
+├── tests/                  # Scripts de prueba
+├── docs/                   # Documentación técnica
+└── main.py                 # Punto de entrada
 ```
 
 ## Modelos Matemáticos
