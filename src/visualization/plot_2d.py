@@ -144,13 +144,13 @@ class Visualizador2D:
         v = np.array(historial['v'])
         omega = np.array(historial['omega'])
         
-        ax1.plot(t, v, 'b-', linewidth=1.5)
+        ax1.plot(t, v, color='#1f77b4', linestyle='-', linewidth=2.5, label='v', alpha=0.9)
         ax1.set_xlabel('Tiempo (s)')
         ax1.set_ylabel('Velocidad lineal (m/s)')
         ax1.set_title('Velocidad Lineal del Robot')
         ax1.grid(True, alpha=0.3)
         
-        ax2.plot(t, omega, 'r-', linewidth=1.5)
+        ax2.plot(t, omega, color='#d62728', linestyle='-', linewidth=2.5, label='ω', alpha=0.9)
         ax2.set_xlabel('Tiempo (s)')
         ax2.set_ylabel('Velocidad angular (rad/s)')
         ax2.set_title('Velocidad Angular del Robot')
@@ -196,16 +196,26 @@ class Visualizador2D:
             return
         
         num_ruedas = len(velocidades[0])
-        colores = ['b', 'r', 'g', 'orange']
         
+        # Estilos diferenciados para mejor visualización cuando se superponen
         if num_ruedas == 2:
             etiquetas = ['Izquierda', 'Derecha']
+            estilos = [
+                {'color': '#1f77b4', 'linestyle': '-', 'linewidth': 2.5, 'alpha': 0.9},  # Azul sólido
+                {'color': '#d62728', 'linestyle': '--', 'linewidth': 2.5, 'alpha': 0.9}  # Rojo discontinuo
+            ]
         else:
             etiquetas = ['Adelante Izq.', 'Adelante Der.', 'Atrás Izq.', 'Atrás Der.']
+            estilos = [
+                {'color': '#1f77b4', 'linestyle': '-', 'linewidth': 2.5, 'alpha': 0.9},   # Azul sólido
+                {'color': '#d62728', 'linestyle': '--', 'linewidth': 2.5, 'alpha': 0.9},  # Rojo discontinuo
+                {'color': '#2ca02c', 'linestyle': '-.', 'linewidth': 2.5, 'alpha': 0.9},  # Verde punto-raya
+                {'color': '#ff7f0e', 'linestyle': ':', 'linewidth': 3.0, 'alpha': 0.9}    # Naranja punteado (más grueso)
+            ]
         
         for i in range(num_ruedas):
             omega_rueda = [v[i] for v in velocidades]
-            ax.plot(t, omega_rueda, color=colores[i], linewidth=1.5, label=etiquetas[i])
+            ax.plot(t, omega_rueda, label=etiquetas[i], **estilos[i])
         
         ax.set_xlabel('Tiempo (s)')
         ax.set_ylabel('Velocidad angular (rad/s)')
