@@ -15,11 +15,22 @@ COLOR_VEL_ANGULAR = '#d95f02'
 LINESTYLE_VEL_LINEAL = '-'
 LINESTYLE_VEL_ANGULAR = '--'
 LINEWIDTH_VEL_GRUESO = 2.4
-ALPHA_VEL = 0.92
+
+COLOR_ACEL_LINEAL = '#2ca02c'
+COLOR_ACEL_ANGULAR = '#ff7f0e'
+LINESTYLE_ACEL_LINEAL = '-'
+LINESTYLE_ACEL_ANGULAR = '--'
+LINEWIDTH_ACEL = 2.2
+
+COLOR_TOTAL = '#000000'
+LINESTYLE_TOTAL = '-'
+LINEWIDTH_TOTAL = 2.8
 
 PALETA_RUEDAS = ['#1f77b4', '#d62728', '#2ca02c', '#9467bd']
 ESTILOS_RUEDAS = ['-', '--', '-.', ':']
 ANCHOS_RUEDAS = [2.4, 2.4, 2.0, 2.0]
+
+ALPHA_SERIE = 0.9
 
 
 class Visualizador2D:
@@ -162,7 +173,7 @@ class Visualizador2D:
             color=COLOR_VEL_LINEAL,
             linestyle=LINESTYLE_VEL_LINEAL,
             linewidth=LINEWIDTH_VEL_GRUESO,
-            alpha=ALPHA_VEL,
+            alpha=ALPHA_SERIE,
             label='Velocidad lineal',
             zorder=2,
         )
@@ -178,7 +189,7 @@ class Visualizador2D:
             color=COLOR_VEL_ANGULAR,
             linestyle=LINESTYLE_VEL_ANGULAR,
             linewidth=LINEWIDTH_VEL_GRUESO,
-            alpha=ALPHA_VEL,
+            alpha=ALPHA_SERIE,
             label='Velocidad angular',
             zorder=2,
         )
@@ -244,7 +255,7 @@ class Visualizador2D:
                 color=color,
                 linestyle=estilo,
                 linewidth=ancho,
-                alpha=ALPHA_VEL,
+                alpha=ALPHA_SERIE,
                 label=etiquetas[i],
                 zorder=2 + i,
             )
@@ -314,7 +325,6 @@ class Visualizador2D:
             return
         
         num_ruedas = len(f_tang[0])
-        colores = ['b', 'r', 'g', 'orange']
         
         if num_ruedas == 2:
             etiquetas = ['Izquierda', 'Derecha']
@@ -324,19 +334,40 @@ class Visualizador2D:
         for i in range(num_ruedas):
             ft = [f[i] for f in f_tang]
             fn = [f[i] for f in f_norm]
-            ax1.plot(t, ft, color=colores[i], linewidth=1.5, label=etiquetas[i])
-            ax2.plot(t, fn, color=colores[i], linewidth=1.5, label=etiquetas[i])
+            color = PALETA_RUEDAS[i % len(PALETA_RUEDAS)]
+            estilo = ESTILOS_RUEDAS[i % len(ESTILOS_RUEDAS)]
+            ancho = ANCHOS_RUEDAS[i % len(ANCHOS_RUEDAS)]
+            ax1.plot(
+                t,
+                ft,
+                color=color,
+                linestyle=estilo,
+                linewidth=ancho,
+                alpha=ALPHA_SERIE,
+                label=etiquetas[i],
+                zorder=2 + i,
+            )
+            ax2.plot(
+                t,
+                fn,
+                color=color,
+                linestyle=estilo,
+                linewidth=ancho,
+                alpha=ALPHA_SERIE,
+                label=etiquetas[i],
+                zorder=2 + i,
+            )
         
         ax1.set_xlabel('Tiempo (s)')
         ax1.set_ylabel('Fuerza tangencial (N)')
         ax1.set_title('Fuerzas Tangenciales por Rueda')
-        ax1.legend()
+        ax1.legend(loc='upper right')
         ax1.grid(True, alpha=0.3)
         
         ax2.set_xlabel('Tiempo (s)')
         ax2.set_ylabel('Fuerza normal (N)')
         ax2.set_title('Fuerzas Normales por Rueda')
-        ax2.legend()
+        ax2.legend(loc='upper right')
         ax2.grid(True, alpha=0.3)
         
         self.figuras['fuerzas']['fig'].tight_layout()
@@ -383,17 +414,37 @@ class Visualizador2D:
         a_lin = np.array(historial['a_lineal'])
         a_ang = np.array(historial['a_angular'])
         
-        ax1.plot(t, a_lin, 'b-', linewidth=1.5)
+        ax1.plot(
+            t,
+            a_lin,
+            color=COLOR_ACEL_LINEAL,
+            linestyle=LINESTYLE_ACEL_LINEAL,
+            linewidth=LINEWIDTH_ACEL,
+            alpha=ALPHA_SERIE,
+            label='Aceleración lineal',
+            zorder=2,
+        )
         ax1.set_xlabel('Tiempo (s)')
         ax1.set_ylabel('Aceleración lineal (m/s²)')
         ax1.set_title('Aceleración Lineal del Robot')
         ax1.grid(True, alpha=0.3)
+        ax1.legend(loc='upper right')
         
-        ax2.plot(t, a_ang, 'r-', linewidth=1.5)
+        ax2.plot(
+            t,
+            a_ang,
+            color=COLOR_ACEL_ANGULAR,
+            linestyle=LINESTYLE_ACEL_ANGULAR,
+            linewidth=LINEWIDTH_ACEL,
+            alpha=ALPHA_SERIE,
+            label='Aceleración angular',
+            zorder=2,
+        )
         ax2.set_xlabel('Tiempo (s)')
         ax2.set_ylabel('Aceleración angular (rad/s²)')
         ax2.set_title('Aceleración Angular del Robot')
         ax2.grid(True, alpha=0.3)
+        ax2.legend(loc='upper right')
         
         self.figuras['aceleraciones']['fig'].tight_layout()
         self.canvas['aceleraciones'].draw()
@@ -435,7 +486,6 @@ class Visualizador2D:
             return
         
         num_ruedas = len(torques[0])
-        colores = ['b', 'r', 'g', 'orange']
         
         if num_ruedas == 2:
             etiquetas = ['Izquierda', 'Derecha']
@@ -444,12 +494,24 @@ class Visualizador2D:
         
         for i in range(num_ruedas):
             torque_rueda = [tau[i] for tau in torques]
-            ax.plot(t, torque_rueda, color=colores[i], linewidth=1.5, label=etiquetas[i])
+            color = PALETA_RUEDAS[i % len(PALETA_RUEDAS)]
+            estilo = ESTILOS_RUEDAS[i % len(ESTILOS_RUEDAS)]
+            ancho = ANCHOS_RUEDAS[i % len(ANCHOS_RUEDAS)]
+            ax.plot(
+                t,
+                torque_rueda,
+                color=color,
+                linestyle=estilo,
+                linewidth=ancho,
+                alpha=ALPHA_SERIE,
+                label=etiquetas[i],
+                zorder=2 + i,
+            )
         
         ax.set_xlabel('Tiempo (s)')
         ax.set_ylabel('Torque (N·m)')
         ax.set_title('Torque por Rueda')
-        ax.legend()
+        ax.legend(loc='upper right')
         ax.grid(True, alpha=0.3)
         
         self.canvas['torque'].draw()
@@ -511,7 +573,6 @@ class Visualizador2D:
             return
         
         num_ruedas = len(potencias[0])
-        colores = ['b', 'r', 'g', 'orange']
         
         if num_ruedas == 2:
             etiquetas = ['Izquierda', 'Derecha']
@@ -520,19 +581,41 @@ class Visualizador2D:
         
         for i in range(num_ruedas):
             pot_rueda = [p[i] for p in potencias]
-            ax1.plot(t, pot_rueda, color=colores[i], linewidth=1.5, label=etiquetas[i])
+            color = PALETA_RUEDAS[i % len(PALETA_RUEDAS)]
+            estilo = ESTILOS_RUEDAS[i % len(ESTILOS_RUEDAS)]
+            ancho = ANCHOS_RUEDAS[i % len(ANCHOS_RUEDAS)]
+            ax1.plot(
+                t,
+                pot_rueda,
+                color=color,
+                linestyle=estilo,
+                linewidth=ancho,
+                alpha=ALPHA_SERIE,
+                label=etiquetas[i],
+                zorder=2 + i,
+            )
         
         ax1.set_xlabel('Tiempo (s)')
         ax1.set_ylabel('Potencia (W)')
         ax1.set_title('Potencia por Rueda')
-        ax1.legend()
+        ax1.legend(loc='upper right')
         ax1.grid(True, alpha=0.3)
         
-        ax2.plot(t, potencia_total, 'k-', linewidth=2)
+        ax2.plot(
+            t,
+            potencia_total,
+            color=COLOR_TOTAL,
+            linestyle=LINESTYLE_TOTAL,
+            linewidth=LINEWIDTH_TOTAL,
+            alpha=1.0,
+            label='Potencia total',
+            zorder=2 + num_ruedas,
+        )
         ax2.set_xlabel('Tiempo (s)')
         ax2.set_ylabel('Potencia total (W)')
         ax2.set_title('Potencia Total del Robot')
         ax2.grid(True, alpha=0.3)
+        ax2.legend(loc='upper right')
         
         self.figuras['potencia']['fig'].tight_layout()
         self.canvas['potencia'].draw()
