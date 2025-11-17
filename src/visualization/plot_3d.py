@@ -66,6 +66,7 @@ class Visualizador3D:
         
         x = np.array(historial['x'])
         y = np.array(historial['y'])
+        z = np.array(historial.get('z', np.zeros_like(x)))  # Usar Z del historial
         
         if len(x) == 0:
             self.ax.set_xlabel('X (m)')
@@ -75,37 +76,32 @@ class Visualizador3D:
             self.canvas.draw()
             return
         
-        # Calcular altura Z para cada punto de la trayectoria
-        z = self._calcular_altura_trayectoria(x, y, pitch, roll, tipo_terreno, distancia_transicion)
-        
-        # Crear superficie del terreno
+        # Crear superficie del terreno basada en la trayectoria real
+        # Para visualizar el terreno, usamos un enfoque simplificado:
+        # mostramos la altura Z correspondiente al tiempo de simulación
         x_min, x_max = min(x) - 2, max(x) + 2
         y_min, y_max = min(y) - 2, max(y) + 2
+        z_min, z_max = min(z) if len(z) > 0 else 0, max(z) if len(z) > 0 else 0
         
-        x_terreno = np.linspace(x_min, x_max, 50)
-        y_terreno = np.linspace(y_min, y_max, 50)
+        x_terreno = np.linspace(x_min, x_max, 30)
+        y_terreno = np.linspace(y_min, y_max, 30)
         X_terreno, Y_terreno = np.meshgrid(x_terreno, y_terreno)
         
-        # Calcular altura del terreno
-        Z_terreno = np.zeros_like(X_terreno)
-        
+        # Calcular altura del terreno como un plano inclinado simple
+        # Para el terreno visual, creamos un plano que representa la inclinación
         if tipo_terreno == 1:
             # Terreno plano
             Z_terreno = np.zeros_like(X_terreno)
-        
-        elif tipo_terreno == 2:
-            # Inclinación simple (pitch)
-            for i in range(X_terreno.shape[0]):
-                for j in range(X_terreno.shape[1]):
-                    dist = np.sqrt(X_terreno[i, j]**2 + Y_terreno[i, j]**2)
-                    Z_terreno[i, j] = self._altura_punto(dist, pitch, 0, distancia_transicion)
-        
-        elif tipo_terreno == 3:
-            # Inclinación compuesta (pitch y roll)
-            for i in range(X_terreno.shape[0]):
-                for j in range(X_terreno.shape[1]):
-                    dist = np.sqrt(X_terreno[i, j]**2 + Y_terreno[i, j]**2)
-                    Z_terreno[i, j] = self._altura_punto(dist, pitch, roll, distancia_transicion)
+        else:
+            # Para terreno inclinado, crear un plano inclinado simple
+            # basado en el ángulo pitch (dirección X) y roll (dirección Y)
+            Z_terreno = np.zeros_like(X_terreno)
+            if abs(pitch) > 0.001:  # Si hay inclinación pitch significativa
+                # Plano inclinado en dirección X: z = x * tan(pitch)
+                Z_terreno += (X_terreno - x_min) * np.tan(pitch)
+            if abs(roll) > 0.001 and tipo_terreno == 3:  # Si hay inclinación roll
+                # Añadir inclinación en dirección Y: z += y * tan(roll)
+                Z_terreno += (Y_terreno - y_min) * np.tan(roll)
         
         # Dibujar superficie del terreno
         self.ax.plot_surface(X_terreno, Y_terreno, Z_terreno, alpha=0.3, 
@@ -125,92 +121,6 @@ class Visualizador3D:
         self.ax.legend()
         
         self.canvas.draw()
-    
-    def _calcular_altura_trayectoria(self, x: np.ndarray, y: np.ndarray, 
-                                     pitch: float, roll: float, tipo_terreno: int,
-                                     distancia_transicion: float) -> np.ndarray:
-        """
-        Calcula la altura Z para cada punto de la trayectoria.
-        
-        Args:
-            x: Coordenadas X
-            y: Coordenadas Y
-            pitch: Ángulo pitch (rad)
-            roll: Ángulo roll (rad)
-            tipo_terreno: Tipo de terreno
-            distancia_transicion: Distancia de transición (m)
-            
-        Returns:
-            Array de alturas Z
-        """
-        z = np.zeros_like(x)
-        
-        if tipo_terreno == 1:
-            # Plano
-            return z
-        
-        # Calcular distancia desde el origen
-        distancias = np.sqrt(x**2 + y**2)
-        
-        for i in range(len(x)):
-            z[i] = self._altura_punto(distancias[i], pitch, roll, distancia_transicion)
-        
-        return z
-    
-    def _altura_punto(self, distancia: float, pitch: float, roll: float, 
-                     distancia_transicion: float) -> float:
-        """
-        Calcula la altura de un punto según la inclinación del terreno.
-        
-        El perfil es: plano → transición → inclinado → transición → plano
-        
-        Args:
-            distancia: Distancia desde el origen (m)
-            pitch: Ángulo pitch (rad)
-            roll: Ángulo roll (rad)
-            distancia_transicion: Distancia donde inicia la pendiente (m)
-            
-        Returns:
-            Altura Z (m)
-        """
-        # Región 1: Plano inicial (0 a distancia_transicion)
-        if distancia < distancia_transicion:
-            return 0.0
-        
-        # Región 2: Transición a inclinado (distancia_transicion a distancia_transicion*1.5)
-        elif distancia < distancia_transicion * 1.5:
-            # Transición suave
-            d_rel = (distancia - distancia_transicion) / (distancia_transicion * 0.5)
-            factor = 0.5 * (1 - np.cos(np.pi * d_rel))
-            d_inclinada = (distancia - distancia_transicion) * factor
-            return d_inclinada * np.tan(pitch)
-        
-        # Región 3: Inclinado (distancia_transicion*1.5 a distancia_transicion*3)
-        elif distancia < distancia_transicion * 3:
-            d_trans = distancia_transicion * 0.5
-            h_trans = d_trans * 0.5 * np.tan(pitch)  # Altura al final de transición
-            d_inclinada = distancia - distancia_transicion * 1.5
-            return h_trans + d_inclinada * np.tan(pitch)
-        
-        # Región 4: Transición a plano (distancia_transicion*3 a distancia_transicion*3.5)
-        elif distancia < distancia_transicion * 3.5:
-            d_trans = distancia_transicion * 0.5
-            h_trans = d_trans * 0.5 * np.tan(pitch)
-            d_inclinada = distancia_transicion * 1.5
-            h_inclinada = h_trans + d_inclinada * np.tan(pitch)
-            
-            d_rel = (distancia - distancia_transicion * 3) / (distancia_transicion * 0.5)
-            factor = 1.0 - 0.5 * (1 - np.cos(np.pi * d_rel))
-            
-            return h_inclinada
-        
-        # Región 5: Plano final
-        else:
-            d_trans = distancia_transicion * 0.5
-            h_trans = d_trans * 0.5 * np.tan(pitch)
-            d_inclinada = distancia_transicion * 1.5
-            h_final = h_trans + d_inclinada * np.tan(pitch)
-            return h_final
     
     def limpiar(self):
         """Limpia la figura 3D."""

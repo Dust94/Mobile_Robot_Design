@@ -84,6 +84,7 @@ class RobotMovilBase(ABC):
         # Estado del robot
         self.x = 0.0  # Posición X (m)
         self.y = 0.0  # Posición Y (m)
+        self.z = 0.0  # Posición Z (m) - altura sobre el terreno
         self.theta = 0.0  # Orientación (rad)
         self.v = 0.0  # Velocidad lineal (m/s)
         self.omega = 0.0  # Velocidad angular (rad/s)
@@ -99,6 +100,7 @@ class RobotMovilBase(ABC):
             'tiempo': [],
             'x': [],
             'y': [],
+            'z': [],  # Coordenada Z (altura)
             'theta': [],
             'v': [],
             'omega': [],
@@ -214,6 +216,7 @@ class RobotMovilBase(ABC):
         self.historial['tiempo'].append(self.tiempo_actual)
         self.historial['x'].append(self.x)
         self.historial['y'].append(self.y)
+        self.historial['z'].append(self.z)
         self.historial['theta'].append(self.theta)
         self.historial['v'].append(self.v)
         self.historial['omega'].append(self.omega)

@@ -131,6 +131,10 @@ class CuatroRuedasCentrado(RobotMovilBase):
         self.x += self.v * np.cos(self.theta) * dt
         self.y += self.v * np.sin(self.theta) * dt
         
+        # Actualizar altura Z basándose en la inclinación del terreno
+        # La altura aumenta/disminuye según la componente vertical del movimiento
+        self.z += self.v * np.sin(self.inclinacion_pitch) * dt
+        
         # Actualizar tiempo
         self.tiempo_actual += dt
         
