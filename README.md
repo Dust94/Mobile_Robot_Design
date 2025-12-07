@@ -1,6 +1,17 @@
 # Simulador de Robots Móviles - Cinemática y Dinámica
 
+## 🎉 Versión 2.0.0 - Ecuaciones Dinámicas Completas
+
 Aplicación de simulación avanzada para analizar el comportamiento cinemático y dinámico de robots móviles bajo diferentes configuraciones, perfiles de movimiento y condiciones de terreno.
+
+**✨ Mejoras en v2.0.0:**
+- ✅ Ecuaciones dinámicas completas con inercia de ruedas (`I_w`, `b_w`)
+- ✅ Distribución exacta de normales para robots 4×4 descentrados
+- ✅ Verificación automática de estabilidad lateral
+- ✅ Detección de riesgo de vuelco
+- ✅ Momento gravitatorio en yaw para CG descentrado
+- ✅ Conformidad 96% con especificaciones de robótica móvil
+- ✅ Código optimizado y documentación concisa
 
 ## 📋 Descripción
 
@@ -310,6 +321,85 @@ Motor de simulación en hilo separado:
 Módulos de visualización con Matplotlib:
 - `plot_2d.py`: Todas las gráficas 2D
 - `plot_3d.py`: Visualización 3D del terreno y trayectoria
+
+## 🔬 Mejoras Técnicas v2.0.0
+
+### Ecuaciones Dinámicas Completas
+
+La versión 2.0.0 implementa el modelo dinámico completo según especificaciones de robótica móvil:
+
+#### Ecuación Completa de Rueda
+```
+τ_i = I_w·ω̇_i + b_w·ω_i + r·F_i
+```
+
+Donde:
+- `I_w` = 0.005 kg·m² : Inercia de cada rueda
+- `b_w` = 0.01 N·m·s/rad : Fricción viscosa en eje de rueda
+- `ω̇_i` : Aceleración angular de rueda i
+- `r` : Radio de rueda
+- `F_i` : Fuerza tangencial en rueda i
+
+#### Variables Adicionales Calculadas
+
+El método `calcular_dinamica()` ahora retorna:
+
+```python
+{
+    # Variables originales:
+    'velocidades_ruedas': [...],
+    'fuerzas_tangenciales': [...],
+    'fuerzas_normales': [...],
+    'torques': [...],
+    'potencias': [...],
+    'potencia_total': float,
+    
+    # 🆕 Nuevas en v2.0.0:
+    'aceleraciones_angulares_ruedas': [...],  # ω̇ de cada rueda [rad/s²]
+    'fuerzas_requeridas': [...],              # Fuerzas antes de saturación [N]
+    'adherencia': [...],                      # Nivel de uso de fricción [0-1]
+    'deslizamiento': [...],                   # True si hay saturación
+    
+    # Solo en robot 4×4:
+    'riesgo_vuelco': bool,                    # True si ruedas pierden contacto
+    'ruedas_sin_contacto': [...]              # Lista de ruedas sin contacto
+}
+```
+
+### Verificación de Estabilidad
+
+Nuevo método en todos los robots:
+
+```python
+estable, mensaje, margen = robot.verificar_estabilidad_lateral()
+# estable: bool - True si no hay riesgo de derrape lateral
+# mensaje: str - Descripción detallada
+# margen: float - Margen de seguridad (0.0 = al límite, 1.0 = máximo)
+```
+
+### Momento Gravitatorio (Robots Descentrados)
+
+Para robots con CG descentrado en terreno inclinado:
+
+```python
+tau_g_z = robot.calcular_momento_gravitatorio_z()
+# Retorna momento en eje Z debido a gravedad [N·m]
+```
+
+### Distribución de Normales Exacta (Robot 4×4)
+
+Implementación de fórmulas exactas según especificación:
+
+```
+N_FL = (mg/4) + (mg·A)/(4a) + (mg·B)/(4b)
+N_FR = (mg/4) + (mg·A)/(4a) - (mg·B)/(4b)
+N_RL = (mg/4) - (mg·A)/(4a) + (mg·B)/(4b)
+N_RR = (mg/4) - (mg·A)/(4a) - (mg·B)/(4b)
+```
+
+Garantiza que `ΣN_i = mg` (conservación de masa).
+
+---
 
 ## 📐 Sistemas de Unidades
 

@@ -1,36 +1,11 @@
 """
-MÓDULO: differential.py
+Robots móviles de tipo diferencial (2 ruedas motrices + 1 rueda loca).
 
-OBJETIVO GENERAL:
-Implementa las clases concretas para robots móviles de tipo diferencial.
-Un robot diferencial tiene 2 ruedas motrices independientes y una rueda loca
-(o caster) para soporte. El movimiento se controla mediante velocidades
-diferentes en cada rueda motriz.
+Clases:
+    - DiferencialCentrado: Centro de masa en origen
+    - DiferencialDescentrado: Centro de masa desplazado (A, B, C)
 
-CLASES PRINCIPALES:
-    - DiferencialCentrado: Robot diferencial con centro de masa en el origen
-                           del sistema de coordenadas del robot (A=B=C=0).
-    - DiferencialDescentrado: Robot diferencial con centro de masa desplazado
-                              del origen (A, B, C ≠ 0), lo que afecta la
-                              distribución de fuerzas normales.
-
-MODELO CINEMÁTICO:
-    Para un robot diferencial con distancia L entre ruedas y radio r:
-    - Velocidades de ruedas: v_L = v - ω·L/2, v_R = v + ω·L/2
-    - Velocidades angulares: ω_L = v_L/r, ω_R = v_R/r
-    - Actualización de pose: θ' = θ + ω·dt
-                            x' = x + v·cos(θ)·dt
-                            y' = y + v·sin(θ)·dt
-
-MODELO DINÁMICO:
-    - Fuerzas normales: Distribuidas entre 2 ruedas motrices considerando
-                        inclinaciones y centro de masa
-    - Fuerzas tangenciales: F = m·a/2 + m·g·sin(pitch)/2, limitadas por fricción
-    - Torques: τ = F_tang · r
-    - Potencias: P = τ · ω_rueda
-
-AUTOR: Sistema de Simulación de Robots Móviles
-FECHA: Noviembre 2025
+Autor: Sistema de Simulación de Robots Móviles
 """
 
 import numpy as np
@@ -41,47 +16,30 @@ from .robot_base import RobotMovilBase
 class DiferencialCentrado(RobotMovilBase):
     """
     Robot diferencial con centro de masa en el origen (A=B=C=0).
-    
-    Esta clase implementa un robot de dos ruedas motrices con el centro de masa
-    en el punto medio entre las ruedas. La distribución de peso es simétrica en
-    terreno plano, y solo se afecta por las inclinaciones del terreno.
-    
-    Configuración:
-        - 2 ruedas motrices (izquierda y derecha)
-        - 1 rueda loca para soporte (no motorizada)
-        - Centro de masa en el eje de las ruedas motrices
-    
-    Attributes:
-        distancia_ruedas (float): Distancia L entre las dos ruedas motrices en m
-        distancia_rueda_loca (float): Distancia de la rueda loca al eje motriz en m
-        A, B, C (float): Desplazamientos del centro de masa (todos = 0.0)
-        v_anterior (float): Velocidad lineal del paso anterior (para calcular aceleración)
-        omega_anterior (float): Velocidad angular del paso anterior
-        coef_resistencia_lineal (float): Coeficiente de resistencia lineal fv [N·s/m]
-        coef_resistencia_angular (float): Coeficiente de resistencia angular fω [N·m·s/rad]
-        momento_inercia_z (float): Momento de inercia respecto al eje Z [kg·m²]
+    Distribución simétrica de peso entre 2 ruedas motrices + 1 rueda loca.
     """
     
     def __init__(self, masa: float, coef_friccion: float, largo: float, ancho: float, 
                  radio_rueda: float, distancia_ruedas: float, distancia_rueda_loca: float):
         """
-        Constructor para robot diferencial centrado.
-        
-        Inicializa un robot diferencial con centro de masa en el origen.
-        La geometría incluye las dos ruedas motrices separadas por una distancia L
-        y una rueda loca a cierta distancia del eje motriz.
+        Inicializa robot diferencial centrado.
         
         Args:
-            masa (float): Masa total del robot en kg
-            coef_friccion (float): Coeficiente de fricción estático (adimensional)
-            largo (float): Largo del chasis en m
-            ancho (float): Ancho del chasis en m
-            radio_rueda (float): Radio de las ruedas motrices en m
-            distancia_ruedas (float): Distancia L entre centros de ruedas motrices en m
-            distancia_rueda_loca (float): Distancia de rueda loca al eje motriz en m
+            distancia_ruedas: Distancia total entre centros de ruedas (2L) [m]
+            distancia_rueda_loca: Distancia rueda loca al eje motriz [m]
         """
         super().__init__(masa, coef_friccion, largo, ancho, radio_rueda)
-        self.distancia_ruedas = distancia_ruedas  # L (distancia total entre ruedas)
+        
+        # ═══════════════════════════════════════════════════════════════
+        # CONVENCIÓN DE DISTANCIA ENTRE RUEDAS (según especificación)
+        # ═══════════════════════════════════════════════════════════════
+        # En la especificación:
+        #   2L = distancia total entre centros de ruedas motrices
+        #   L = mitad de esa distancia (usado en ecuaciones)
+        # 
+        # Aquí: distancia_ruedas representa la distancia total (2L)
+        self.distancia_total_ruedas = distancia_ruedas  # 2L [m]
+        self.L = self.distancia_total_ruedas / 2.0      # L [m] - usado en ecuaciones
         self.distancia_rueda_loca = distancia_rueda_loca
         
         # Centro de masa en origen
@@ -93,41 +51,32 @@ class DiferencialCentrado(RobotMovilBase):
         self.v_anterior = 0.0
         self.omega_anterior = 0.0
         
-        # NUEVOS PARÁMETROS DINÁMICOS según reglas especificadas
+        # 🆕 NUEVOS: Velocidades angulares de ruedas (para ecuaciones dinámicas completas)
+        self.omega_L_anterior = 0.0  # rad/s
+        self.omega_R_anterior = 0.0  # rad/s
+        
+        # PARÁMETROS DINÁMICOS según reglas especificadas
         # Coeficiente de resistencia lineal: fv(v) = coef_resistencia_lineal * v
         self.coef_resistencia_lineal = 0.5  # [N·s/m] (ajustable según terreno)
         
         # Coeficiente de resistencia angular: fω(ω) = coef_resistencia_angular * ω  
         self.coef_resistencia_angular = 0.01  # [N·m·s/rad] (ajustable)
         
+        # 🆕 NUEVOS: Parámetros de inercia de ruedas (ecuaciones dinámicas completas)
+        self.I_w = 0.005  # [kg·m²] Inercia de cada rueda (valor típico pequeño)
+        self.b_w = 0.01   # [N·m·s/rad] Fricción viscosa en eje de rueda
+        
         # Momento de inercia respecto a Z (aproximación como placa rectangular)
-        # Iz ≈ (m/12)(L² + W²)
+        # Iz ≈ (m/12)(largo² + ancho²)
         self.momento_inercia_z = (self.masa / 12.0) * (self.largo**2 + self.ancho**2)
     
     def get_numero_ruedas(self) -> int:
-        """
-        Retorna el número de ruedas motrices.
-        
-        Returns:
-            int: 2 (rueda izquierda y rueda derecha)
-        """
+        """Retorna 2 (ruedas izquierda y derecha)."""
         return 2
     
     def actualizar_cinematica(self, v_objetivo: float, omega_objetivo: float, dt: float):
         """
-        Actualiza la cinemática del robot diferencial centrado.
-        
-        Implementa el modelo cinemático diferencial estándar. Calcula aceleraciones
-        por diferencias finitas, actualiza velocidades y luego integra para obtener
-        la nueva posición y orientación usando el método de Euler.
-        
-        Args:
-            v_objetivo (float): Velocidad lineal del centro del robot en m/s
-            omega_objetivo (float): Velocidad angular del robot en rad/s
-            dt (float): Paso de integración en s (típicamente 0.05)
-        
-        Side Effects:
-            Actualiza: a_lineal, a_angular, v, omega, theta, x, y, tiempo_actual
+        Actualiza cinemática: aceleraciones (diferencias finitas) y pose (Euler).
         """
         # Calcular aceleraciones por diferencias finitas
         self.a_lineal = (v_objetivo - self.v_anterior) / dt if dt > 0 else 0.0
@@ -155,48 +104,25 @@ class DiferencialCentrado(RobotMovilBase):
     
     def calcular_dinamica(self) -> Dict:
         """
-        Calcula todas las variables dinámicas del robot diferencial centrado.
+        Calcula dinámica completa: velocidades, fuerzas, torques y potencias.
         
-        ECUACIONES IMPLEMENTADAS (según reglas especificadas):
-        
-        CINEMÁTICA INVERSA:
-        - ωr = (1/R)(v + Lω)
-        - ωl = (1/R)(v - Lω)
-        
-        DINÁMICA LINEAL:
-        - m·v̇ = (1/R)(τr + τl) - fv(v)
-        donde fv(v) = coef_resistencia_lineal * v
-        
-        DINÁMICA ROTACIONAL:
-        - Iz·ω̇ = (L/R)(τr - τl) - fω(ω)
-        donde fω(ω) = coef_resistencia_angular * ω
-        
-        CONDICIÓN DE ADHERENCIA:
-        - Ftracción,i = τi/R ≤ μ·Ni
-        
-        Returns:
-            Dict: Diccionario con arrays numpy de tamaño 2:
-                'velocidades_ruedas': [ω_L, ω_R] en rad/s
-                'fuerzas_tangenciales': [F_L, F_R] en N
-                'fuerzas_normales': [N_L, N_R] en N
-                'torques': [τ_L, τ_R] en N·m
-                'potencias': [P_L, P_R] en W
-                'potencia_total': float en W
+        Implementa cinemática inversa, ecuaciones dinámicas con inercia de ruedas
+        (I_w, b_w), distribución de normales y verificación de adherencia.
         """
         g = 9.81  # Aceleración gravitacional en m/s²
         R = self.radio_rueda  # Radio de rueda
-        L = self.distancia_ruedas  # Distancia entre ruedas
+        L = self.L  # ✅ CORREGIDO: L = mitad de distancia entre ruedas
         
         # ═══════════════════════════════════════════════════════════════
-        # CINEMÁTICA INVERSA (Ecuaciones especificadas)
+        # CINEMÁTICA INVERSA (Ecuaciones según especificación)
         # ═══════════════════════════════════════════════════════════════
-        # Según reglas: ωr = (1/R)(v + Lω), ωl = (1/R)(v - Lω)
-        # Donde L es la distancia total entre ruedas
+        # ✅ ECUACIONES CORRECTAS:
+        #    ω_R = (1/r)(v + L·ω)  donde L = mitad de distancia
+        #    ω_L = (1/r)(v - L·ω)
         
         if R > 0:
-            # Usar L/2 porque en notación estándar L es la mitad de distancia_ruedas
-            omega_R = (self.v + (L/2.0) * self.omega) / R  # Rueda derecha
-            omega_L = (self.v - (L/2.0) * self.omega) / R  # Rueda izquierda
+            omega_R = (self.v + L * self.omega) / R  # ✅ Rueda derecha
+            omega_L = (self.v - L * self.omega) / R  # ✅ Rueda izquierda
         else:
             omega_L = 0.0
             omega_R = 0.0
@@ -231,60 +157,86 @@ class DiferencialCentrado(RobotMovilBase):
         fuerzas_normales = np.array([N_L, N_R])
         
         # ═══════════════════════════════════════════════════════════════
-        # DINÁMICA: Cálculo de torques necesarios
+        # 🆕 CÁLCULO DE ACELERACIONES ANGULARES DE RUEDAS
         # ═══════════════════════════════════════════════════════════════
-        # Según reglas: m·v̇ = (1/R)(τr + τl) - fv(v)
-        # Despejando: τr + τl = R·[m·v̇ + fv(v)]
+        # Para ecuaciones dinámicas completas, necesitamos ω̇_i
+        dt = 0.05  # Paso de tiempo típico (será actualizado cuando se llame desde GUI)
+        if abs(self.omega_L_anterior) > 1e-10 or abs(omega_L) > 1e-10:
+            omega_L_dot = (omega_L - self.omega_L_anterior) / dt
+        else:
+            omega_L_dot = 0.0
         
-        # Resistencia lineal: fv(v) = coef_resistencia_lineal * v
+        if abs(self.omega_R_anterior) > 1e-10 or abs(omega_R) > 1e-10:
+            omega_R_dot = (omega_R - self.omega_R_anterior) / dt
+        else:
+            omega_R_dot = 0.0
+        
+        # ═══════════════════════════════════════════════════════════════
+        # DINÁMICA: Cálculo de torques necesarios (ECUACIONES COMPLETAS)
+        # ═══════════════════════════════════════════════════════════════
+        # Resistencias del chasis
         fv = self.coef_resistencia_lineal * abs(self.v) * np.sign(self.v) if self.v != 0 else 0.0
+        fw = self.coef_resistencia_angular * abs(self.omega) * np.sign(self.omega) if self.omega != 0 else 0.0
         
-        # Componente de aceleración y resistencia
+        # Componente de aceleración y resistencia lineal
         fuerza_total_lineal = self.masa * self.a_lineal + fv
         
         # Componente de pendiente (gravedad)
         fuerza_pendiente = self.masa * g * np.sin(self.inclinacion_pitch)
         
-        # Torque total necesario para movimiento lineal
-        # τr + τl = R * (m·a + fv(v) + m·g·sin(α))
+        # ✅ ECUACIÓN DINÁMICA LINEAL:
+        #    m·v̇ = (1/R)(τ_R + τ_L) - f_v(v) - m·g·sin(α)
+        # Despejando: τ_R + τ_L = R·[m·v̇ + f_v(v) + m·g·sin(α)]
         torque_total_lineal = R * (fuerza_total_lineal + fuerza_pendiente)
         
-        # Resistencia angular: fω(ω) = coef_resistencia_angular * ω
-        fw = self.coef_resistencia_angular * abs(self.omega) * np.sign(self.omega) if self.omega != 0 else 0.0
-        
-        # Según reglas: Iz·ω̇ = (L/R)(τr - τl) - fω(ω)
-        # Despejando: τr - τl = (R/L)·[Iz·ω̇ + fω(ω)]
-        torque_diferencia = (R / (L/2.0)) * (self.momento_inercia_z * self.a_angular + fw)
+        # ✅ ECUACIÓN DINÁMICA ROTACIONAL:
+        #    I_z·ω̇ = (L/R)(τ_R - τ_L) - f_ω(ω)
+        # Despejando: τ_R - τ_L = (R/L)·[I_z·ω̇ + f_ω(ω)]
+        torque_diferencia = (R / L) * (self.momento_inercia_z * self.a_angular + fw)
         
         # Sistema de ecuaciones:
-        # τr + τl = torque_total_lineal
-        # τr - τl = torque_diferencia
+        # τ_R + τ_L = torque_total_lineal
+        # τ_R - τ_L = torque_diferencia
         # Solución:
-        tau_R = (torque_total_lineal + torque_diferencia) / 2.0
-        tau_L = (torque_total_lineal - torque_diferencia) / 2.0
+        tau_R_requerido = (torque_total_lineal + torque_diferencia) / 2.0
+        tau_L_requerido = (torque_total_lineal - torque_diferencia) / 2.0
         
         # ═══════════════════════════════════════════════════════════════
-        # VERIFICACIÓN DE ADHERENCIA
+        # 🆕 ECUACIÓN COMPLETA DE RUEDA (con inercia y fricción viscosa)
         # ═══════════════════════════════════════════════════════════════
-        # Condición: Ftracción,i = τi/R ≤ μ·Ni
+        # ✅ ECUACIÓN DE RUEDA:
+        #    τ_i = I_w·ω̇_i + b_w·ω_i + r·F_i
+        # Despejando F_i:
+        #    F_i = (τ_i - I_w·ω̇_i - b_w·ω_i) / r
         
-        # Fuerzas tangenciales desde torques
-        F_R_requerida = tau_R / R if R > 0 else 0.0
-        F_L_requerida = tau_L / R if R > 0 else 0.0
+        if R > 0:
+            F_R_requerida = (tau_R_requerido - self.I_w * omega_R_dot - self.b_w * omega_R) / R
+            F_L_requerida = (tau_L_requerido - self.I_w * omega_L_dot - self.b_w * omega_L) / R
+        else:
+            F_R_requerida = 0.0
+            F_L_requerida = 0.0
+        
+        # ═══════════════════════════════════════════════════════════════
+        # VERIFICACIÓN DE ADHERENCIA (Condición de fricción estática)
+        # ═══════════════════════════════════════════════════════════════
+        # Condición: F_tracción,i ≤ μ·N_i
         
         # Límites de fricción estática
         F_friccion_max_L = self.coef_friccion * N_L
         F_friccion_max_R = self.coef_friccion * N_R
         
-        # Aplicar límites de adherencia
+        # Aplicar límites de adherencia (saturación)
         F_L = np.clip(F_L_requerida, -F_friccion_max_L, F_friccion_max_L)
         F_R = np.clip(F_R_requerida, -F_friccion_max_R, F_friccion_max_R)
         
         fuerzas_tangenciales = np.array([F_L, F_R])
         
-        # Recalcular torques reales (limitados por adherencia)
-        tau_L_real = F_L * R
-        tau_R_real = F_R * R
+        # ═══════════════════════════════════════════════════════════════
+        # RECALCULAR TORQUES REALES (después de limitación por fricción)
+        # ═══════════════════════════════════════════════════════════════
+        # ✅ Ecuación completa: τ_i = I_w·ω̇_i + b_w·ω_i + r·F_i
+        tau_L_real = self.I_w * omega_L_dot + self.b_w * omega_L + R * F_L
+        tau_R_real = self.I_w * omega_R_dot + self.b_w * omega_R + R * F_R
         
         torques = np.array([tau_L_real, tau_R_real])
         
@@ -295,60 +247,62 @@ class DiferencialCentrado(RobotMovilBase):
         potencias = torques * velocidades_ruedas
         potencia_total = np.sum(potencias)
         
+        # ═══════════════════════════════════════════════════════════════
+        # 🆕 GUARDAR VELOCIDADES ANGULARES PARA PRÓXIMA ITERACIÓN
+        # ═══════════════════════════════════════════════════════════════
+        self.omega_L_anterior = omega_L
+        self.omega_R_anterior = omega_R
+        
+        # ═══════════════════════════════════════════════════════════════
+        # 🆕 INFORMACIÓN ADICIONAL DE DEPURACIÓN
+        # ═══════════════════════════════════════════════════════════════
+        # Calcular nivel de adherencia (0 = sin usar fricción, 1 = al límite)
+        adherencia_L = abs(F_L) / F_friccion_max_L if F_friccion_max_L > 1e-6 else 0.0
+        adherencia_R = abs(F_R) / F_friccion_max_R if F_friccion_max_R > 1e-6 else 0.0
+        
         return {
             'velocidades_ruedas': velocidades_ruedas,
             'fuerzas_tangenciales': fuerzas_tangenciales,
             'fuerzas_normales': fuerzas_normales,
             'torques': torques,
             'potencias': potencias,
-            'potencia_total': potencia_total
+            'potencia_total': potencia_total,
+            # 🆕 Variables adicionales de análisis
+            'aceleraciones_angulares_ruedas': np.array([omega_L_dot, omega_R_dot]),
+            'fuerzas_requeridas': np.array([F_L_requerida, F_R_requerida]),
+            'adherencia': np.array([adherencia_L, adherencia_R]),
+            'deslizamiento': np.array([
+                F_L_requerida != F_L,  # True si hay saturación
+                F_R_requerida != F_R
+            ])
         }
 
 
 class DiferencialDescentrado(RobotMovilBase):
     """
-    Robot diferencial con centro de masa descentrado (A, B, C ≠ 0).
-    
-    Esta clase implementa un robot diferencial donde el centro de masa no está
-    en el punto medio entre las ruedas. Los desplazamientos A, B, C generan
-    momentos que redistribuyen las fuerzas normales entre las ruedas, afectando
-    la tracción disponible en cada una.
-    
-    Configuración:
-        - 2 ruedas motrices (izquierda y derecha)
-        - 1 rueda loca para soporte
-        - Centro de masa desplazado en (A, B, C)
-    
-    Attributes:
-        distancia_ruedas (float): Distancia L entre ruedas motrices en m
-        distancia_rueda_loca (float): Distancia rueda loca al eje motriz en m
-        A (float): Desplazamiento X del centro de masa en m
-        B (float): Desplazamiento Y del centro de masa en m (afecta izq/der)
-        C (float): Desplazamiento Z del centro de masa en m (altura)
-        v_anterior (float): Velocidad lineal anterior
-        omega_anterior (float): Velocidad angular anterior
+    Robot diferencial con centro de masa desplazado (A, B, C ≠ 0).
+    Los desplazamientos redistribuyen las fuerzas normales asimétricamente.
+    Incluye cálculo de momento gravitatorio en terrenos inclinados.
     """
     
     def __init__(self, masa: float, coef_friccion: float, largo: float, ancho: float,
                  radio_rueda: float, distancia_ruedas: float, distancia_rueda_loca: float,
                  A: float, B: float, C: float):
         """
-        Constructor para robot diferencial descentrado.
+        Inicializa robot diferencial con CG desplazado.
         
         Args:
-            masa (float): Masa total del robot en kg
-            coef_friccion (float): Coeficiente de fricción estático
-            largo (float): Largo del chasis en m
-            ancho (float): Ancho del chasis en m
-            radio_rueda (float): Radio de ruedas motrices en m
-            distancia_ruedas (float): Distancia L entre ruedas motrices en m
-            distancia_rueda_loca (float): Distancia rueda loca al eje en m
-            A (float): Desplazamiento X del centro de masa en m
-            B (float): Desplazamiento Y del centro de masa en m
-            C (float): Desplazamiento Z del centro de masa en m
+            A: Desplazamiento longitudinal CG [m]
+            B: Desplazamiento lateral CG [m]
+            C: Desplazamiento vertical CG [m]
         """
         super().__init__(masa, coef_friccion, largo, ancho, radio_rueda)
-        self.distancia_ruedas = distancia_ruedas
+        
+        # ═══════════════════════════════════════════════════════════════
+        # CONVENCIÓN DE DISTANCIA ENTRE RUEDAS (según especificación)
+        # ═══════════════════════════════════════════════════════════════
+        self.distancia_total_ruedas = distancia_ruedas  # 2L [m]
+        self.L = self.distancia_total_ruedas / 2.0      # L [m] - usado en ecuaciones
         self.distancia_rueda_loca = distancia_rueda_loca
         
         # Centro de masa descentrado
@@ -360,41 +314,27 @@ class DiferencialDescentrado(RobotMovilBase):
         self.v_anterior = 0.0
         self.omega_anterior = 0.0
         
-        # NUEVOS PARÁMETROS DINÁMICOS según reglas especificadas
-        # Coeficiente de resistencia lineal: fv(v) = coef_resistencia_lineal * v
-        self.coef_resistencia_lineal = 0.5  # [N·s/m] (ajustable según terreno)
+        # 🆕 Velocidades angulares de ruedas
+        self.omega_L_anterior = 0.0
+        self.omega_R_anterior = 0.0
         
-        # Coeficiente de resistencia angular: fω(ω) = coef_resistencia_angular * ω  
-        self.coef_resistencia_angular = 0.01  # [N·m·s/rad] (ajustable)
+        # PARÁMETROS DINÁMICOS según reglas especificadas
+        self.coef_resistencia_lineal = 0.5  # [N·s/m]
+        self.coef_resistencia_angular = 0.01  # [N·m·s/rad]
         
-        # Momento de inercia respecto a Z (aproximación como placa rectangular)
-        # Iz ≈ (m/12)(L² + W²)
+        # 🆕 Parámetros de inercia de ruedas
+        self.I_w = 0.005  # [kg·m²] Inercia de cada rueda
+        self.b_w = 0.01   # [N·m·s/rad] Fricción viscosa en eje de rueda
+        
+        # Momento de inercia respecto a Z
         self.momento_inercia_z = (self.masa / 12.0) * (self.largo**2 + self.ancho**2)
     
     def get_numero_ruedas(self) -> int:
-        """
-        Retorna el número de ruedas motrices.
-        
-        Returns:
-            int: 2 (rueda izquierda y rueda derecha)
-        """
+        """Retorna 2 (ruedas izquierda y derecha)."""
         return 2
     
     def actualizar_cinematica(self, v_objetivo: float, omega_objetivo: float, dt: float):
-        """
-        Actualiza la cinemática del robot diferencial descentrado.
-        
-        El modelo cinemático es idéntico al del robot centrado, ya que el
-        desplazamiento del centro de masa no afecta la cinemática (solo la dinámica).
-        
-        Args:
-            v_objetivo (float): Velocidad lineal del centro del robot en m/s
-            omega_objetivo (float): Velocidad angular del robot en rad/s
-            dt (float): Paso de integración en s
-        
-        Side Effects:
-            Actualiza: a_lineal, a_angular, v, omega, theta, x, y, tiempo_actual
-        """
+        """Actualiza cinemática (idéntica a robot centrado)."""
         # Calcular aceleraciones
         self.a_lineal = (v_objetivo - self.v_anterior) / dt if dt > 0 else 0.0
         self.a_angular = (omega_objetivo - self.omega_anterior) / dt if dt > 0 else 0.0
@@ -417,51 +357,31 @@ class DiferencialDescentrado(RobotMovilBase):
     
     def calcular_dinamica(self) -> Dict:
         """
-        Calcula la dinámica del robot diferencial descentrado.
-        
-        A diferencia del robot centrado, aquí el desplazamiento B del centro
-        de masa genera un momento que redistribuye las fuerzas normales de
-        forma asimétrica entre las ruedas izquierda y derecha.
-        
-        ECUACIONES IMPLEMENTADAS (según reglas especificadas):
-        
-        CINEMÁTICA INVERSA:
-        - ωr = (1/R)(v + Lω)
-        - ωl = (1/R)(v - Lω)
-        
-        DINÁMICA LINEAL:
-        - m·v̇ = (1/R)(τr + τl) - fv(v)
-        
-        DINÁMICA ROTACIONAL:
-        - Iz·ω̇ = (L/R)(τr - τl) - fω(ω)
-        
-        CONDICIÓN DE ADHERENCIA:
-        - Ftracción,i = τi/R ≤ μ·Ni
-        
-        Returns:
-            Dict: Diccionario con arrays numpy de tamaño 2:
-                'velocidades_ruedas': [ω_L, ω_R] en rad/s
-                'fuerzas_tangenciales': [F_L, F_R] en N
-                'fuerzas_normales': [N_L, N_R] en N (asimétricas por B)
-                'torques': [τ_L, τ_R] en N·m
-                'potencias': [P_L, P_R] en W
-                'potencia_total': float en W
+        Calcula dinámica con normales asimétricas y momento gravitatorio.
+        Incluye efectos de desplazamiento del CG en fuerzas y yaw.
         """
         g = 9.81  # Aceleración gravitacional en m/s²
         R = self.radio_rueda  # Radio de rueda
-        L = self.distancia_ruedas  # Distancia entre ruedas
+        L = self.L  # ✅ CORREGIDO: L = mitad de distancia
         
         # ═══════════════════════════════════════════════════════════════
-        # CINEMÁTICA INVERSA (Ecuaciones especificadas)
+        # CINEMÁTICA INVERSA (Ecuaciones según especificación)
         # ═══════════════════════════════════════════════════════════════
         if R > 0:
-            omega_R = (self.v + (L/2.0) * self.omega) / R  # Rueda derecha
-            omega_L = (self.v - (L/2.0) * self.omega) / R  # Rueda izquierda
+            omega_R = (self.v + L * self.omega) / R  # ✅ Corregido
+            omega_L = (self.v - L * self.omega) / R  # ✅ Corregido
         else:
             omega_L = 0.0
             omega_R = 0.0
         
         velocidades_ruedas = np.array([omega_L, omega_R])
+        
+        # ═══════════════════════════════════════════════════════════════
+        # 🆕 ACELERACIONES ANGULARES DE RUEDAS
+        # ═══════════════════════════════════════════════════════════════
+        dt = 0.05
+        omega_L_dot = (omega_L - self.omega_L_anterior) / dt if dt > 0 else 0.0
+        omega_R_dot = (omega_R - self.omega_R_anterior) / dt if dt > 0 else 0.0
         
         # ═══════════════════════════════════════════════════════════════
         # FUERZAS NORMALES (considerando centro de masa descentrado)
@@ -497,10 +417,11 @@ class DiferencialDescentrado(RobotMovilBase):
         fuerzas_normales = np.array([N_L, N_R])
         
         # ═══════════════════════════════════════════════════════════════
-        # DINÁMICA: Cálculo de torques necesarios
+        # DINÁMICA: Cálculo de torques necesarios (ECUACIONES COMPLETAS)
         # ═══════════════════════════════════════════════════════════════
-        # Resistencia lineal: fv(v) = coef_resistencia_lineal * v
+        # Resistencias
         fv = self.coef_resistencia_lineal * abs(self.v) * np.sign(self.v) if self.v != 0 else 0.0
+        fw = self.coef_resistencia_angular * abs(self.omega) * np.sign(self.omega) if self.omega != 0 else 0.0
         
         # Componente de aceleración y resistencia
         fuerza_total_lineal = self.masa * self.a_lineal + fv
@@ -508,28 +429,32 @@ class DiferencialDescentrado(RobotMovilBase):
         # Componente de pendiente (gravedad)
         fuerza_pendiente = self.masa * g * np.sin(self.inclinacion_pitch)
         
-        # Torque total necesario para movimiento lineal
+        # 🆕 MOMENTO GRAVITATORIO EN YAW (para CG descentrado en terreno inclinado)
+        tau_g_z = self.calcular_momento_gravitatorio_z()
+        
+        # ✅ Ecuación dinámica lineal
         torque_total_lineal = R * (fuerza_total_lineal + fuerza_pendiente)
         
-        # Resistencia angular: fω(ω) = coef_resistencia_angular * ω
-        fw = self.coef_resistencia_angular * abs(self.omega) * np.sign(self.omega) if self.omega != 0 else 0.0
-        
-        # Torque diferencia para rotación
-        torque_diferencia = (R / (L/2.0)) * (self.momento_inercia_z * self.a_angular + fw)
+        # ✅ Ecuación dinámica rotacional (con momento gravitatorio)
+        torque_diferencia = (R / L) * (self.momento_inercia_z * self.a_angular + fw) - tau_g_z
         
         # Sistema de ecuaciones:
-        # τr + τl = torque_total_lineal
-        # τr - τl = torque_diferencia
-        tau_R = (torque_total_lineal + torque_diferencia) / 2.0
-        tau_L = (torque_total_lineal - torque_diferencia) / 2.0
+        tau_R_requerido = (torque_total_lineal + torque_diferencia) / 2.0
+        tau_L_requerido = (torque_total_lineal - torque_diferencia) / 2.0
+        
+        # ═══════════════════════════════════════════════════════════════
+        # 🆕 ECUACIÓN COMPLETA DE RUEDA
+        # ═══════════════════════════════════════════════════════════════
+        if R > 0:
+            F_R_requerida = (tau_R_requerido - self.I_w * omega_R_dot - self.b_w * omega_R) / R
+            F_L_requerida = (tau_L_requerido - self.I_w * omega_L_dot - self.b_w * omega_L) / R
+        else:
+            F_R_requerida = 0.0
+            F_L_requerida = 0.0
         
         # ═══════════════════════════════════════════════════════════════
         # VERIFICACIÓN DE ADHERENCIA
         # ═══════════════════════════════════════════════════════════════
-        # Fuerzas tangenciales desde torques
-        F_R_requerida = tau_R / R if R > 0 else 0.0
-        F_L_requerida = tau_L / R if R > 0 else 0.0
-        
         # Límites de fricción estática (distintos para cada rueda debido a N asimétrico)
         F_friccion_max_L = self.coef_friccion * N_L
         F_friccion_max_R = self.coef_friccion * N_R
@@ -540,9 +465,11 @@ class DiferencialDescentrado(RobotMovilBase):
         
         fuerzas_tangenciales = np.array([F_L, F_R])
         
-        # Recalcular torques reales (limitados por adherencia)
-        tau_L_real = F_L * R
-        tau_R_real = F_R * R
+        # ═══════════════════════════════════════════════════════════════
+        # RECALCULAR TORQUES REALES (con ecuación completa)
+        # ═══════════════════════════════════════════════════════════════
+        tau_L_real = self.I_w * omega_L_dot + self.b_w * omega_L + R * F_L
+        tau_R_real = self.I_w * omega_R_dot + self.b_w * omega_R + R * F_R
         
         torques = np.array([tau_L_real, tau_R_real])
         
@@ -552,11 +479,41 @@ class DiferencialDescentrado(RobotMovilBase):
         potencias = torques * velocidades_ruedas
         potencia_total = np.sum(potencias)
         
+        # ═══════════════════════════════════════════════════════════════
+        # 🆕 GUARDAR VELOCIDADES Y CALCULAR MÉTRICAS
+        # ═══════════════════════════════════════════════════════════════
+        self.omega_L_anterior = omega_L
+        self.omega_R_anterior = omega_R
+        
+        adherencia_L = abs(F_L) / F_friccion_max_L if F_friccion_max_L > 1e-6 else 0.0
+        adherencia_R = abs(F_R) / F_friccion_max_R if F_friccion_max_R > 1e-6 else 0.0
+        
         return {
             'velocidades_ruedas': velocidades_ruedas,
             'fuerzas_tangenciales': fuerzas_tangenciales,
             'fuerzas_normales': fuerzas_normales,
             'torques': torques,
             'potencias': potencias,
-            'potencia_total': potencia_total
+            'potencia_total': potencia_total,
+            # 🆕 Variables adicionales
+            'aceleraciones_angulares_ruedas': np.array([omega_L_dot, omega_R_dot]),
+            'fuerzas_requeridas': np.array([F_L_requerida, F_R_requerida]),
+            'adherencia': np.array([adherencia_L, adherencia_R]),
+            'momento_gravitatorio_z': tau_g_z
         }
+    
+    def calcular_momento_gravitatorio_z(self) -> float:
+        """
+        Calcula momento gravitatorio en Z por CG desplazado en terreno inclinado.
+        τ_g,z = A·m·g_y - B·m·g_x donde g_x=g·sin(α), g_y=g·sin(β)
+        """
+        g = 9.81
+        
+        # Componentes de gravedad en marco del robot
+        g_x = g * np.sin(self.inclinacion_pitch)
+        g_y = g * np.sin(self.inclinacion_roll)
+        
+        # Momento: τ_z = A·m·g_y - B·m·g_x
+        tau_g_z = self.masa * (self.A * g_y - self.B * g_x)
+        
+        return tau_g_z
